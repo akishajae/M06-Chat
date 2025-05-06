@@ -1,21 +1,40 @@
 import React, { useState } from "react";
-import { useWebSocket } from "../websocket/WebSocketProvider";
+import { WebSocket } from "vite";
 const Login: React.FC = () => {
-    const { sendJson, connected } = useWebSocket();
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
-  
+
+    /* Creacio del websocket */
+    const ws = new WebSocket('ws://localhost:8080/ws');
+    ws.onopen = () => {
+      console.log('WebSocket conectado');
+    }
+    ws.onclose = () => {
+      console.log('WebSocket desconectado');
+    }
+    ws.onerror = (error) => {
+      console.error('Error en WebSocket:', error);
+    }
+    ws.onmessage = (event) => {
+      console.log('Mensaje recibido:', event.data);
+    }
+    const connected = ws.readyState === WebSocket.OPEN;
+
+
     const enviarLogin = () => {
       if (!connected) return alert('WebSocket no está conectado');
-  
-      sendJson({
+      
+      const loginData = {
         type: 'login',
-        username,
-        email,
-      });
-  
+        username: username,
+        email: email,
+      };
+
+      ws.send(JSON.stringify(loginData));
+      
       console.log('🔐 Login enviado por WebSocket');
     };
+    
   return (
     <div className="display-flex flex h-screen w-screen justify-center items-center bg-gray-200">
       <div className="flex flex-col justify-center items-center bg-white p-8 rounded-lg shadow-lg w-96">
