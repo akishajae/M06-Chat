@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { WebSocket } from "vite";
 const Login: React.FC = () => {
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
