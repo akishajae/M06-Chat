@@ -1,39 +1,45 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 const Login: React.FC = () => {
-    const [username, setUsername] = useState('');
-    const [email, setEmail] = useState('');
-
-    /* Creacio del websocket */
-    const ws = new WebSocket('ws://localhost:8080/ws');
-    ws.onopen = () => {
-      console.log('WebSocket conectado');
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const isLogged = localStorage.getItem("isLogged");
+  const [loginError, setLoginError] = useState(false);
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (isLogged) {
+      // navigate("/home");
     }
-    ws.onclose = () => {
-      console.log('WebSocket desconectado');
-    }
-    ws.onerror = (error) => {
-      console.error('Error en WebSocket:', error);
-    }
-    ws.onmessage = (event) => {
-      console.log('Mensaje recibido:', event.data);
-    }
-    const connected = ws.readyState === WebSocket.OPEN;
+  });
 
+  const enviarLogin = async () => {
+    try {
+      const response = await fetch("http://localhost:4000/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, email }),
+      });
 
-    const enviarLogin = () => {
-      if (!connected) return alert('WebSocket no está conectado');
-      
-      const loginData = {
-        type: 'login',
-        username: username,
-        email: email,
-      };
+      if (!response.ok) {
+        throw new Error("Login failed");
+      }
 
-      ws.send(JSON.stringify(loginData));
-      
-      console.log('🔐 Login enviado por WebSocket');
-    };
-    
+      const data = await response.json();
+      console.log("Login successful:", data);
+
+      // Navigate to the home page
+      localStorage.setItem("username",username)
+      localStorage.setItem("isLogged","true")
+      navigate("/home");
+
+    } catch (error) {
+      console.error("Error during login:", error);
+      setLoginError(true);
+    }
+  };
+
   return (
     <div className="display-flex flex h-screen w-screen justify-center items-center bg-gray-200">
       <div className="flex flex-col justify-center items-center bg-white p-8 rounded-lg shadow-lg w-96">
@@ -52,7 +58,7 @@ const Login: React.FC = () => {
               name="username"
               id="username"
               className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-              onChange={(e)=> setUsername(e.target.value)}
+              onChange={(e) => setUsername(e.target.value)}
               required
             />
           </div>
@@ -68,15 +74,19 @@ const Login: React.FC = () => {
               name="email"
               id="email"
               className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-              onChange={(e)=> setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
+          {loginError && (
+            <div className="text-red-500 text-sm mb-4">
+              Login failed. Please check your credentials and try again.
+            </div>
+          )}
           <button
             onClick={() => enviarLogin()}
             type="submit"
             className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition duration-200 hover:cursor-pointer"
-
           >
             Login
           </button>
