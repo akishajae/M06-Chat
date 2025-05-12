@@ -8,7 +8,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   useEffect(() => {
     if (isLogged) {
-      // navigate("/home");
+      navigate("/home");
     }
   });
 

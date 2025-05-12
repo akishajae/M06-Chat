@@ -11,7 +11,7 @@ interface MessageData {
 function App() {
   const navigate = useNavigate();
   const chatRef = useRef<HTMLDivElement>(null);
-  const wsRef = useRef<WebSocket | null>(null);
+  const ws = useRef<WebSocket | null>(null);
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [documentContent, setDocumentContent] = useState("");
@@ -58,13 +58,13 @@ function App() {
       })
       .catch((error) => console.error("Error fetching document:", error));
 
-    wsRef.current = new WebSocket("ws://localhost:4000");
+    ws.current = new WebSocket("ws://localhost:4000");
 
-    wsRef.current.onopen = () => {
+    ws.current.onopen = () => {
       console.log("WebSocket conectado");
     };
 
-    wsRef.current.onmessage = (event) => {
+    ws.current.onmessage = (event) => {
       try {
         const messageData = JSON.parse(event.data);
         console.log("Received WebSocket message:", messageData);
@@ -92,16 +92,16 @@ function App() {
       }
     };
 
-    wsRef.current.onclose = () => {
+    ws.current.onclose = () => {
       console.log("WebSocket desconectado");
     };
 
-    wsRef.current.onerror = (error) => {
+    ws.current.onerror = (error) => {
       console.error("WebSocket error:", error);
     };
 
     return () => {
-      wsRef.current?.close();
+      ws.current?.close();
     };
   }, []);
 
@@ -113,16 +113,16 @@ function App() {
   }, [messages]);
 
   const sendMessage = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && inputMessage.trim()) {
+    if (ws.current?.readyState === WebSocket.OPEN && inputMessage.trim()) {
       const messageData = {
         type: "message",
-        author: localStorage.getItem("username") || "Anonymous",
+        author: localStorage.getItem("username"),
         text: inputMessage,
         timestamp: new Date().toISOString(),
       };
       
       console.log("Sending message:", messageData);
-      wsRef.current.send(JSON.stringify(messageData));
+      ws.current.send(JSON.stringify(messageData));
       setInputMessage("");
     } else {
       console.error("WebSocket no está conectado o mensaje vacío");
@@ -132,8 +132,8 @@ function App() {
   const handleDocumentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
     setDocumentContent(newContent);
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
+    if (ws.current?.readyState === WebSocket.OPEN) {
+      ws.current.send(
         JSON.stringify({
           type: "document",
           content: newContent,
