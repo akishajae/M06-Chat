@@ -44,7 +44,6 @@ function App() {
             return null;
           })
           .filter((msg) => msg !== null) as MessageData[];
-        console.log("Fetched initial chat:", parsedMessages);
         setMessages(parsedMessages);
       })
       .catch((error) => console.error("Error fetching chat:", error));
@@ -52,7 +51,6 @@ function App() {
     fetch("http://localhost:4000/api/document")
       .then((res) => res.text())
       .then((data) => {
-        console.log("Fetched initial document:", data);
         setDocumentContent(data);
       })
       .catch((error) => console.error("Error fetching document:", error));
@@ -60,7 +58,7 @@ function App() {
     ws.current = new WebSocket("ws://localhost:4000");
 
     ws.current.onopen = () => {
-      console.log("WebSocket conectado");
+      console.log("Welcome to col");
     };
 
     ws.current.onmessage = (event) => {
@@ -306,7 +304,7 @@ function App() {
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyPress}
             />
-            <div className="rounded-full w-[50px] h-[50px] flex flex-col bg-purple-400 justify-center items-center">
+            <div className="rounded-full w-[50px] h-[50px] flex flex-col transition-colors bg-gray-300 justify-center items-center hover:cursor-pointer hover:bg-gray-400">
               <svg
                 onClick={sendMessage}
                 xmlns="http://www.w3.org/2000/svg"
