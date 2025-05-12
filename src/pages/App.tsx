@@ -58,7 +58,13 @@ function App() {
     ws.current = new WebSocket("ws://localhost:4000");
 
     ws.current.onopen = () => {
-      console.log("Welcome to col");
+      const messageData = {
+        type: "systemNotification",
+        author: localStorage.getItem("username"),
+        text: localStorage.getItem("username") + " se ha conectado.",
+        timestamp: new Date().toISOString(),
+      };
+      ws.current?.send(JSON.stringify(messageData));
     };
 
     ws.current.onmessage = (event) => {
@@ -95,7 +101,7 @@ function App() {
     };
 
     ws.current.onclose = () => {
-      console.log("WebSocket desconectado");
+      console.log("disconected");
     };
 
     ws.current.onerror = (error) => {
@@ -159,8 +165,16 @@ function App() {
    * Handles the logout, removes localstorage
    */
   const handleLogout = () => {
+    const messageData = {
+      type: "systemNotification",
+      author: localStorage.getItem("username"),
+      text: localStorage.getItem("username") + " se ha desconectado.",
+      timestamp: new Date().toISOString(),
+    };
+    ws.current?.send(JSON.stringify(messageData));
     localStorage.removeItem("isLogged");
     localStorage.removeItem("username");
+    ws.current?.close();
     navigate("/");
   };
 
