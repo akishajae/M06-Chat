@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Message from "../components/message";
 
 interface MessageData {
   author: string;
@@ -69,7 +68,12 @@ function App() {
         const messageData = JSON.parse(event.data);
         console.log("Received WebSocket message:", messageData);
 
-        if (messageData.type === "broadcast" && messageData.author && messageData.text && messageData.timestamp) {
+        if (
+          messageData.type === "broadcast" &&
+          messageData.author &&
+          messageData.text &&
+          messageData.timestamp
+        ) {
           const newMessage: MessageData = {
             author: messageData.author,
             text: messageData.text,
@@ -120,7 +124,7 @@ function App() {
         text: inputMessage,
         timestamp: new Date().toISOString(),
       };
-      
+
       console.log("Sending message:", messageData);
       ws.current.send(JSON.stringify(messageData));
       setInputMessage("");
@@ -142,9 +146,8 @@ function App() {
     }
   };
 
-
   /**
-   * 
+   *
    * @param e element
    * On enter, calls sendMessage function due to send a message using websocket
    */
@@ -194,98 +197,122 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen">
-      {/* Chat Section (Untouched) */}
-      <div className="w-[30%] h-full bg-gray-200 flex flex-col justify-center items-center">
-        <div className="w-[100%] h-[100%] bg-gray-200 grid-rows-2">
-          <div className="h-[90%] flex flex-col">
-            <div className="flex flex-col flex-grow w-full max-w-xl bg-white overflow-hidden">
-              <div
-                id="chat"
-                ref={chatRef}
-                className="flex flex-col flex-grow h-0 p-4 overflow-auto"
-              >
-                {messages.map((msg, index) => (
-                  <Message
-                    key={index}
-                    author={msg.author}
-                    text={msg.text}
-                    timestamp={msg.timestamp}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="h-[10%] w-full border-t border-gray-400 flex items-center px-4 mr-3">
-            <input
-              id="textMessage"
-              className="flex-grow p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-              type="text"
-              placeholder="Type your message..."
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-            />
-            <div className="w-[10%] rounded-full bg-blue">
-              <svg
-                onClick={sendMessage}
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="icon icon-tabler icons-tabler-outline icon-tabler-send-2"
-              >
-                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                <path d="M4.698 4.034l16.302 7.966l-16.302 7.966a.503 .503 0 0 1 -.546 -.124a.555 .555 0 0 1 -.12 -.568l2.468 -7.274l-2.468 -7.274a.555 .555 0 0 1 .12 -.568a.503 .503 0 0 1 .546 -.124z" />
-                <path d="M6.5 12h14.5" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Collaborative Document Section with Sidebar */}
-      <div className="w-[70%] h-full bg-gray-50 flex">
-        {/* Sidebar */}
-        <div className="w-64 bg-white shadow-md flex flex-col items-center py-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-6">Opciones</h2>
-          <button
-            className="w-48 mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-            onClick={handleDownloadDocument}
+    <div className="w-[100%]">
+      <div className="w-[5%] h-[100vh] border-r-1 border-gray-300 flex flex-col justify-end items-center gap-2">
+        <div onClick={handleLogout} className="h-[50px] w-[50px] mb-3 rounded-full bg-gray-300 items-center flex flex-col justify-center hover:cursor-pointer">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            className="icon icon-tabler icons-tabler-outline icon-tabler-logout"
           >
-            Descargar Documento
-          </button>
-          <button
-            className="w-48 mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-            onClick={handleDownloadChat}
-          >
-            Descargar Chat
-          </button>
-          <button
-            className="w-48 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-            onClick={handleLogout}
-          >
-            Logout
-          </button>
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
+            <path d="M9 12h12l-3 -3" />
+            <path d="M18 15l3 -3" />
+          </svg>
         </div>
-
-        {/* Document Area */}
-        <div className="flex-1 p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Collaborative Document</h2>
-          <textarea
-            className="w-full h-[80vh] p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-            value={documentContent}
-            onChange={handleDocumentChange}
-            placeholder="Start collaborating here..."
-          />
-        </div>
+        <div className="h-[50px] w-[50px] mb-3 rounded-full bg-gray-600 "></div>
       </div>
     </div>
+    // <div className="flex h-screen w-screen">
+    //   {/* Chat Section (Untouched) */}
+    //   <div className="w-[30%] h-full bg-gray-200 flex flex-col justify-center items-center">
+    //     <div className="w-[100%] h-[100%] bg-gray-200 grid-rows-2">
+    //       <div className="h-[90%] flex flex-col">
+    //         <div className="flex flex-col flex-grow w-full max-w-xl bg-white overflow-hidden">
+    //           <div
+    //             id="chat"
+    //             ref={chatRef}
+    //             className="flex flex-col flex-grow h-0 p-4 overflow-auto"
+    //           >
+    //             {messages.map((msg, index) => (
+    //               <Message
+    //                 key={index}
+    //                 author={msg.author}
+    //                 text={msg.text}
+    //                 timestamp={msg.timestamp}
+    //               />
+    //             ))}
+    //           </div>
+    //         </div>
+    //       </div>
+    //       <div className="h-[10%] w-full border-t border-gray-400 flex items-center px-4 mr-3">
+    //         <input
+    //           id="textMessage"
+    //           className="flex-grow p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+    //           type="text"
+    //           placeholder="Type your message..."
+    //           value={inputMessage}
+    //           onChange={(e) => setInputMessage(e.target.value)}
+    //           onKeyPress={handleKeyPress}
+    //         />
+    //         <div className="w-[10%] rounded-full bg-blue">
+    //           <svg
+    //             onClick={sendMessage}
+    //             xmlns="http://www.w3.org/2000/svg"
+    //             width="24"
+    //             height="24"
+    //             viewBox="0 0 24 24"
+    //             fill="none"
+    //             stroke="currentColor"
+    //             strokeWidth="2"
+    //             strokeLinecap="round"
+    //             strokeLinejoin="round"
+    //             className="icon icon-tabler icons-tabler-outline icon-tabler-send-2"
+    //           >
+    //             <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+    //             <path d="M4.698 4.034l16.302 7.966l-16.302 7.966a.503 .503 0 0 1 -.546 -.124a.555 .555 0 0 1 -.12 -.568l2.468 -7.274l-2.468 -7.274a.555 .555 0 0 1 .12 -.568a.503 .503 0 0 1 .546 -.124z" />
+    //             <path d="M6.5 12h14.5" />
+    //           </svg>
+    //         </div>
+    //       </div>
+    //     </div>
+    //   </div>
+
+    //   {/* Collaborative Document Section with Sidebar */}
+    //   <div className="w-[70%] h-full bg-gray-50 flex">
+    //     {/* Sidebar */}
+    //     <div className="w-64 bg-white shadow-md flex flex-col items-center py-6">
+    //       <h2 className="text-lg font-semibold text-gray-800 mb-6">Opciones</h2>
+    //       <button
+    //         className="w-48 mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+    //         onClick={handleDownloadDocument}
+    //       >
+    //         Descargar Documento
+    //       </button>
+    //       <button
+    //         className="w-48 mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+    //         onClick={handleDownloadChat}
+    //       >
+    //         Descargar Chat
+    //       </button>
+    //       <button
+    //         className="w-48 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+    //         onClick={handleLogout}
+    //       >
+    //         Logout
+    //       </button>
+    //     </div>
+
+    //     {/* Document Area */}
+    //     <div className="flex-1 p-6">
+    //       <h2 className="text-xl font-semibold text-gray-800 mb-4">Collaborative Document</h2>
+    //       <textarea
+    //         className="w-full h-[80vh] p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+    //         value={documentContent}
+    //         onChange={handleDocumentChange}
+    //         placeholder="Start collaborating here..."
+    //       />
+    //     </div>
+    //   </div>
+    // </div>
   );
 }
 
