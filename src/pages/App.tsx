@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import Message from "../components/Message";
 interface MessageData {
   author: string;
   text: string;
@@ -197,9 +197,57 @@ function App() {
   };
 
   return (
-    <div className="w-[100%]">
-      <div className="w-[5%] h-[100vh] border-r-1 border-gray-300 flex flex-col justify-end items-center gap-2">
-        <div onClick={handleLogout} className="h-[50px] w-[50px] mb-3 rounded-full bg-gray-300 items-center flex flex-col justify-center hover:cursor-pointer">
+    <div className="w-[100%] h-full flex">
+      <div className="w-[70px] h-[100vh] border-r-1 bg-gray-200 border-gray-300 flex flex-col justify-end items-center gap-2">
+        <div
+          onClick={handleDownloadChat}
+          className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 items-center flex flex-col justify-center hover:cursor-pointer hover:bg-gray-400"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            className="icon icon-tabler icons-tabler-outline icon-tabler-file-export"
+          >
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+            <path d="M11.5 21h-4.5a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v5m-5 6h7m-3 -3l3 3l-3 3" />
+          </svg>
+        </div>
+        <div
+          onClick={handleDownloadDocument}
+          className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 items-center flex flex-col justify-center hover:cursor-pointer hover:bg-blue-400"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            className="icon icon-tabler icons-tabler-outline icon-tabler-file-type-doc"
+          >
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+            <path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" />
+            <path d="M5 15v6h1a2 2 0 0 0 2 -2v-2a2 2 0 0 0 -2 -2h-1z" />
+            <path d="M20 16.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0" />
+            <path d="M12.5 15a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1 -3 0v-3a1.5 1.5 0 0 1 1.5 -1.5z" />
+          </svg>
+        </div>
+        <div
+          onClick={handleLogout}
+          className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 items-center flex flex-col justify-center hover:cursor-pointer hover:bg-red-400"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="24"
@@ -218,7 +266,75 @@ function App() {
             <path d="M18 15l3 -3" />
           </svg>
         </div>
-        <div className="h-[50px] w-[50px] mb-3 rounded-full bg-gray-600 "></div>
+        <div className="h-[50px] w-[50px] mb-3 rounded-full bg-gray-600 flex flex-col justify-center text-center ">
+          <p
+            className="font-medium
+          "
+          >
+            {localStorage.getItem("username")?.slice(0, 2).toUpperCase()}
+          </p>
+        </div>
+      </div>
+      {/* Chat section*/}
+      <div className="w-[30%] h-[100vh] border-r-1 bg-gray-50 border-gray-300 grid-cols-2">
+        <div className="h-[93%] flex flex-col">
+          <div className="flex flex-col flex-grow w-full max-w-xl bg-white overflow-hidden">
+            <div
+              id="chat"
+              ref={chatRef}
+              className="flex flex-col flex-grow h-0 p-4 overflow-auto"
+            >
+              {messages.map((msg, index) => (
+                <Message
+                  key={index}
+                  author={msg.author}
+                  text={msg.text}
+                  timestamp={msg.timestamp}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="border-t-1 border-gray-300 flex h-[7%] flex-col justify-center">
+          <div className="flex justify-evenly">
+            <input
+              id="textMessage"
+              className="w-[80%] h-[50px] align-middle border-1 transition-colors duration-300 border-gray-300 rounded-2xl indent-3.5 focus:outline-1 focus:outline-gray-400"
+              type="text"
+              placeholder="Type your message..."
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyDown={handleKeyPress}
+            />
+            <div className="rounded-full w-[50px] h-[50px] flex flex-col bg-purple-400 justify-center items-center">
+              <svg
+                onClick={sendMessage}
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                className="icon icon-tabler icons-tabler-outline icon-tabler-send-2"
+              >
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M4.698 4.034l16.302 7.966l-16.302 7.966a.503 .503 0 0 1 -.546 -.124a.555 .555 0 0 1 -.12 -.568l2.468 -7.274l-2.468 -7.274a.555 .555 0 0 1 .12 -.568a.503 .503 0 0 1 .546 -.124z" />
+                <path d="M6.5 12h14.5" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="w-[70%] flex flex-col justify-center items-center">
+        <textarea
+          className="h-[90vh] w-[50%] border-1 border-black p-5 resize-none shadow-2xl focus:select-none focus:outline-none"
+          value={documentContent}
+          onChange={handleDocumentChange}
+          placeholder="Silence is gold..."
+        />
       </div>
     </div>
     // <div className="flex h-screen w-screen">
@@ -244,15 +360,15 @@ function App() {
     //         </div>
     //       </div>
     //       <div className="h-[10%] w-full border-t border-gray-400 flex items-center px-4 mr-3">
-    //         <input
-    //           id="textMessage"
-    //           className="flex-grow p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-    //           type="text"
-    //           placeholder="Type your message..."
-    //           value={inputMessage}
-    //           onChange={(e) => setInputMessage(e.target.value)}
-    //           onKeyPress={handleKeyPress}
-    //         />
+    // <input
+    //   id="textMessage"
+    //   className="flex-grow p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+    //   type="text"
+    //   placeholder="Type your message..."
+    //   value={inputMessage}
+    //   onChange={(e) => setInputMessage(e.target.value)}
+    //   onKeyPress={handleKeyPress}
+    // />
     //         <div className="w-[10%] rounded-full bg-blue">
     //           <svg
     //             onClick={sendMessage}
