@@ -142,12 +142,21 @@ function App() {
     }
   };
 
+
+  /**
+   * 
+   * @param e element
+   * On enter, calls sendMessage function due to send a message using websocket
+   */
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       sendMessage();
     }
   };
 
+  /**
+   * Handles the logout, removes localstorage
+   */
   const handleLogout = () => {
     localStorage.removeItem("isLogged");
     localStorage.removeItem("username");
