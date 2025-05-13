@@ -7,13 +7,29 @@ interface MessageData {
   timestamp: string;
 }
 
+// interface DocumentData {
+//   author: string;
+//   content: string;
+//   timestamp: string;
+// }
+
+type DocumentSnapshot = {
+  timestamp: string; // ISO string
+  author: string;
+  content: string;
+};
+
 function App() {
   const navigate = useNavigate();
   const chatRef = useRef<HTMLDivElement>(null);
   const ws = useRef<WebSocket | null>(null);
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [inputMessage, setInputMessage] = useState("");
+
   const [documentContent, setDocumentContent] = useState("");
+  const [snapshots, setSnapshots] = useState<DocumentSnapshot[]>([]);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastContentRef = useRef("");
 
   // Check authentication
   useEffect(() => {
@@ -61,7 +77,7 @@ function App() {
       const messageData = {
         type: "systemNotification",
         author: localStorage.getItem("username"),
-        text: localStorage.getItem("username") + " se ha conectado.",
+        text: localStorage.getItem("username") + " has entered the chat.",
         timestamp: new Date().toISOString(),
       };
       ws.current?.send(JSON.stringify(messageData));
@@ -71,6 +87,12 @@ function App() {
       try {
         const messageData = JSON.parse(event.data);
         console.log("Received WebSocket message:", messageData);
+
+        const documentMessage = JSON.parse(event.data);
+        if (documentMessage.type === "edit") {
+          setDocumentContent(documentMessage.content);
+          recordSnapshot(documentMessage.author, documentMessage.content);
+        }
 
         if (
           messageData.type === "broadcast" &&
@@ -113,6 +135,46 @@ function App() {
     };
   }, []);
 
+  // 3. Send edit to server
+  const sendEdit = (content: string) => {
+    const message = {
+      type: "edit",
+      author: localStorage.getItem("username"),
+      timestamp: new Date().toISOString(),
+      content,
+    };
+    ws.current?.send(JSON.stringify(message));
+  };
+
+  // 4. Record a snapshot
+const recordSnapshot = (author: string, content: string) => {
+  setSnapshots(prev => [...prev, {
+    timestamp: new Date().toISOString(),
+    author,
+    content
+  }]);
+};
+
+// 5. Generate .txt from history
+const generateSnapshotTxt = (history: DocumentSnapshot[]): string => {
+  return history.map(s => {
+    const date = new Date(s.timestamp).toLocaleString();
+    return `[${date} - ${s.author}]\n${s.content}\n`;
+  }).join('\n');
+};
+
+// 6. Download .txt
+const downloadHistoryTxt = () => {
+  const historyTxt = generateSnapshotTxt(snapshots);
+  const blob = new Blob([historyTxt], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'document-history.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
   // Auto-scroll to bottom for chat
   useEffect(() => {
     if (chatRef.current) {
@@ -148,6 +210,16 @@ function App() {
         })
       );
     }
+
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      const currentUser = localStorage.getItem("username") || "Unknown";
+      if (newContent !== lastContentRef.current) {
+        lastContentRef.current = newContent;
+        sendEdit(newContent);
+        recordSnapshot(currentUser, newContent);
+      }
+    }, 500);
   };
 
   /**
@@ -168,7 +240,7 @@ function App() {
     const messageData = {
       type: "systemNotification",
       author: localStorage.getItem("username"),
-      text: localStorage.getItem("username") + " se ha desconectado.",
+      text: localStorage.getItem("username") + " has left the chat.",
       timestamp: new Date().toISOString(),
     };
     ws.current?.send(JSON.stringify(messageData));
@@ -208,11 +280,25 @@ function App() {
       .catch((error) => console.error("Error downloading document:", error));
   };
 
+  // HISTORICAL
+
+  // Function to download document history
+  // const handleDownloadDocumentHistory = () => {
+  //   const historyText = documentHistory.join("\n");
+  //   const blob = new Blob([historyText], { type: "text/plain" });
+  //   const url = URL.createObjectURL(blob);
+  //   const link = document.createElement("a");
+  //   link.href = url;
+  //   link.download = "documentHistory.txt";
+  //   link.click();
+  //   URL.revokeObjectURL(url);
+  // };
+
   return (
     <div className="w-[100%] h-full flex">
       <div className="w-[70px] h-[100vh] border-r-1 bg-gray-200 border-gray-300 flex flex-col items-center gap-2">
         <div className="flex flex-col justify-start mt-4">
-        <div className="h-[50px] w-[50px] mb-3 rounded-full bg-gray-600 flex flex-col justify-center items-center text-center">
+          <div className="h-[50px] w-[50px] mb-3 rounded-full bg-gray-600 flex flex-col justify-center items-center text-center">
             <p className="font-medium">
               {localStorage.getItem("username")?.slice(0, 2).toUpperCase()}
             </p>
@@ -265,7 +351,9 @@ function App() {
               <path d="M12.5 15a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1 -3 0v-3a1.5 1.5 0 0 1 1.5 -1.5z" />
             </svg>
           </div>
-          <div className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 flex items-center justify-center hover:cursor-pointer hover:bg-blue-400">
+          <div
+          onClick={downloadHistoryTxt}
+          className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 flex items-center justify-center hover:cursor-pointer hover:bg-blue-400">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -318,14 +406,14 @@ function App() {
               ref={chatRef}
               className="flex flex-col flex-grow h-0 p-4 overflow-auto"
             >
-                {messages.map((msg, index) => (
+              {messages.map((msg, index) => (
                 <Message
                   key={index}
                   author={msg.author}
                   text={msg.text}
                   timestamp={new Date(msg.timestamp).toLocaleString()}
                 />
-                ))}
+              ))}
             </div>
           </div>
         </div>
