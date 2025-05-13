@@ -7,13 +7,29 @@ interface MessageData {
   timestamp: string;
 }
 
+// interface DocumentData {
+//   author: string;
+//   content: string;
+//   timestamp: string;
+// }
+
+type DocumentSnapshot = {
+  timestamp: string; // ISO string
+  author: string;
+  content: string;
+};
+
 function App() {
   const navigate = useNavigate();
   const chatRef = useRef<HTMLDivElement>(null);
   const ws = useRef<WebSocket | null>(null);
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [inputMessage, setInputMessage] = useState("");
+
   const [documentContent, setDocumentContent] = useState("");
+  const [snapshots, setSnapshots] = useState<DocumentSnapshot[]>([]);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastContentRef = useRef("");
 
   // Check authentication
   useEffect(() => {
@@ -61,7 +77,7 @@ function App() {
       const messageData = {
         type: "systemNotification",
         author: localStorage.getItem("username"),
-        text: localStorage.getItem("username") + " se ha conectado.",
+        text: localStorage.getItem("username") + " has entered the chat.",
         timestamp: new Date().toISOString(),
       };
       ws.current?.send(JSON.stringify(messageData));
@@ -71,6 +87,12 @@ function App() {
       try {
         const messageData = JSON.parse(event.data);
         console.log("Received WebSocket message:", messageData);
+
+        const documentMessage = JSON.parse(event.data);
+        if (documentMessage.type === "edit") {
+          setDocumentContent(documentMessage.content);
+          recordSnapshot(documentMessage.author, documentMessage.content);
+        }
 
         if (
           messageData.type === "broadcast" &&
@@ -113,6 +135,46 @@ function App() {
     };
   }, []);
 
+  // 3. Send edit to server
+  const sendEdit = (content: string) => {
+    const message = {
+      type: "edit",
+      author: localStorage.getItem("username"),
+      timestamp: new Date().toISOString(),
+      content,
+    };
+    ws.current?.send(JSON.stringify(message));
+  };
+
+  // 4. Record a snapshot
+const recordSnapshot = (author: string, content: string) => {
+  setSnapshots(prev => [...prev, {
+    timestamp: new Date().toISOString(),
+    author,
+    content
+  }]);
+};
+
+// 5. Generate .txt from history
+const generateSnapshotTxt = (history: DocumentSnapshot[]): string => {
+  return history.map(s => {
+    const date = new Date(s.timestamp).toLocaleString();
+    return `[${date} - ${s.author}]\n${s.content}\n`;
+  }).join('\n');
+};
+
+// 6. Download .txt
+const downloadHistoryTxt = () => {
+  const historyTxt = generateSnapshotTxt(snapshots);
+  const blob = new Blob([historyTxt], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'document-history.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
   // Auto-scroll to bottom for chat
   useEffect(() => {
     if (chatRef.current) {
@@ -148,6 +210,16 @@ function App() {
         })
       );
     }
+
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      const currentUser = localStorage.getItem("username") || "Unknown";
+      if (newContent !== lastContentRef.current) {
+        lastContentRef.current = newContent;
+        sendEdit(newContent);
+        recordSnapshot(currentUser, newContent);
+      }
+    }, 500);
   };
 
   /**
@@ -168,7 +240,7 @@ function App() {
     const messageData = {
       type: "systemNotification",
       author: localStorage.getItem("username"),
-      text: localStorage.getItem("username") + " se ha desconectado.",
+      text: localStorage.getItem("username") + " has left the chat.",
       timestamp: new Date().toISOString(),
     };
     ws.current?.send(JSON.stringify(messageData));
@@ -208,83 +280,121 @@ function App() {
       .catch((error) => console.error("Error downloading document:", error));
   };
 
+  // HISTORICAL
+
+  // Function to download document history
+  // const handleDownloadDocumentHistory = () => {
+  //   const historyText = documentHistory.join("\n");
+  //   const blob = new Blob([historyText], { type: "text/plain" });
+  //   const url = URL.createObjectURL(blob);
+  //   const link = document.createElement("a");
+  //   link.href = url;
+  //   link.download = "documentHistory.txt";
+  //   link.click();
+  //   URL.revokeObjectURL(url);
+  // };
+
   return (
     <div className="w-[100%] h-full flex">
-      <div className="w-[70px] h-[100vh] border-r-1 bg-gray-200 border-gray-300 flex flex-col justify-end items-center gap-2">
-        <div
-          onClick={handleDownloadChat}
-          className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 items-center flex flex-col justify-center hover:cursor-pointer hover:bg-gray-400"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            className="icon icon-tabler icons-tabler-outline icon-tabler-file-export"
-          >
-            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-            <path d="M14 3v4a1 1 0 0 0 1 1h4" />
-            <path d="M11.5 21h-4.5a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v5m-5 6h7m-3 -3l3 3l-3 3" />
-          </svg>
+      <div className="w-[70px] h-[100vh] border-r-1 bg-gray-200 border-gray-300 flex flex-col items-center gap-2">
+        <div className="flex flex-col justify-start mt-4">
+          <div className="h-[50px] w-[50px] mb-3 rounded-full bg-gray-600 flex flex-col justify-center items-center text-center">
+            <p className="font-medium">
+              {localStorage.getItem("username")?.slice(0, 2).toUpperCase()}
+            </p>
+          </div>
         </div>
-        <div
-          onClick={handleDownloadDocument}
-          className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 items-center flex flex-col justify-center hover:cursor-pointer hover:bg-blue-400"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            className="icon icon-tabler icons-tabler-outline icon-tabler-file-type-doc"
+        <div className="flex flex-col justify-center items-center h-full">
+          <div
+            onClick={handleDownloadChat}
+            className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 flex items-center justify-center hover:cursor-pointer hover:bg-gray-400"
           >
-            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-            <path d="M14 3v4a1 1 0 0 0 1 1h4" />
-            <path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" />
-            <path d="M5 15v6h1a2 2 0 0 0 2 -2v-2a2 2 0 0 0 -2 -2h-1z" />
-            <path d="M20 16.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0" />
-            <path d="M12.5 15a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1 -3 0v-3a1.5 1.5 0 0 1 1.5 -1.5z" />
-          </svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              className="icon icon-tabler icons-tabler-outline icon-tabler-message-forward"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12z" />
+              <path d="M13 8l3 3l-3 3" />
+              <path d="M16 11h-8" />
+            </svg>
+          </div>
+          <div
+            onClick={handleDownloadDocument}
+            className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 flex items-center justify-center hover:cursor-pointer hover:bg-blue-400"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              className="icon icon-tabler icons-tabler-outline icon-tabler-file-type-doc"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+              <path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" />
+              <path d="M5 15v6h1a2 2 0 0 0 2 -2v-2a2 2 0 0 0 -2 -2h-1z" />
+              <path d="M20 16.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0" />
+              <path d="M12.5 15a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1 -3 0v-3a1.5 1.5 0 0 1 1.5 -1.5z" />
+            </svg>
+          </div>
+          <div
+          onClick={downloadHistoryTxt}
+          className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 flex items-center justify-center hover:cursor-pointer hover:bg-blue-400">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              className="icon icon-tabler icons-tabler-outline icon-tabler-history"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M12 8l0 4l2 2" />
+              <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" />
+            </svg>{" "}
+          </div>
         </div>
-        <div
-          onClick={handleLogout}
-          className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 items-center flex flex-col justify-center hover:cursor-pointer hover:bg-red-400"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            className="icon icon-tabler icons-tabler-outline icon-tabler-logout"
+        <div className="flex flex-col justify-end mt-auto">
+          <div
+            onClick={handleLogout}
+            className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 items-center flex flex-col justify-center hover:cursor-pointer hover:bg-red-400"
           >
-            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-            <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
-            <path d="M9 12h12l-3 -3" />
-            <path d="M18 15l3 -3" />
-          </svg>
-        </div>
-        <div className="h-[50px] w-[50px] mb-3 rounded-full bg-gray-600 flex flex-col justify-center text-center ">
-          <p
-            className="font-medium
-          "
-          >
-            {localStorage.getItem("username")?.slice(0, 2).toUpperCase()}
-          </p>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              className="icon icon-tabler icons-tabler-outline icon-tabler-logout"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
+              <path d="M9 12h12l-3 -3" />
+              <path d="M18 15l3 -3" />
+            </svg>
+          </div>
         </div>
       </div>
       {/* Chat section*/}
@@ -301,7 +411,7 @@ function App() {
                   key={index}
                   author={msg.author}
                   text={msg.text}
-                  timestamp={msg.timestamp}
+                  timestamp={new Date(msg.timestamp).toLocaleString()}
                 />
               ))}
             </div>
@@ -342,7 +452,7 @@ function App() {
       </div>
       <div className="w-[70%] flex flex-col justify-center items-center">
         <textarea
-          className="h-[90vh] w-[50%] border-1 border-black p-5 resize-none shadow-2xl focus:select-none focus:outline-none"
+          className="h-[90vh] w-[60%] border-1 border-gray-100 p-5 resize-none shadow-md focus:select-none focus:outline-none"
           value={documentContent}
           onChange={handleDocumentChange}
           placeholder="Silence is gold..."
