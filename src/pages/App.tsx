@@ -1,17 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Message from "../components/Message";
+
+// Definición de interfaces para los datos de mensajes y snapshots
 interface MessageData {
   author: string;
   text: string;
   timestamp: string;
 }
-
-// interface DocumentData {
-//   author: string;
-//   content: string;
-//   timestamp: string;
-// }
 
 type DocumentSnapshot = {
   timestamp: string; // ISO string
@@ -21,17 +17,17 @@ type DocumentSnapshot = {
 
 function App() {
   const navigate = useNavigate();
-  const chatRef = useRef<HTMLDivElement>(null);
-  const ws = useRef<WebSocket | null>(null);
-  const [messages, setMessages] = useState<MessageData[]>([]);
-  const [inputMessage, setInputMessage] = useState("");
+  const chatRef = useRef<HTMLDivElement>(null); // Referencia al contenedor del chat para auto-scroll
+  const ws = useRef<WebSocket | null>(null); // Referencia al WebSocket para la comunicación en tiempo real
+  const [messages, setMessages] = useState<MessageData[]>([]); // Estado para almacenar los mensajes del chat
+  const [inputMessage, setInputMessage] = useState(""); // Estado para el mensaje que el usuario escribe
+  const [documentContent, setDocumentContent] = useState(""); // Estado para el contenido del documento
+  const [snapshots, setSnapshots] = useState<DocumentSnapshot[]>([]); // Estado para las instantáneas del documento
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null); // Temporizador para debounce en ediciones
+  const lastContentRef = useRef(""); // Último contenido del documento para evitar duplicados
 
-  const [documentContent, setDocumentContent] = useState("");
-  const [snapshots, setSnapshots] = useState<DocumentSnapshot[]>([]);
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastContentRef = useRef("");
-
-  // Check authentication
+  // **Sección: Verificación de autenticación**
+  // Verifica si el usuario está autenticado; si no, redirige a la página de inicio
   useEffect(() => {
     const isLogged = localStorage.getItem("isLogged");
     if (!isLogged) {
@@ -39,9 +35,10 @@ function App() {
     }
   }, [navigate]);
 
-  // WebSocket and initial data fetch
+  // **Sección: Inicialización de WebSocket y carga inicial de datos**
+  // Configura el WebSocket, carga mensajes y contenido inicial del documento
   useEffect(() => {
-    // Fetch initial chat and document data
+    // Carga los mensajes iniciales del chat desde el servidor
     fetch("http://localhost:4000/api/chat")
       .then((res) => res.text())
       .then((chatText) => {
@@ -64,6 +61,7 @@ function App() {
       })
       .catch((error) => console.error("Error fetching chat:", error));
 
+    // Carga el contenido inicial del documento desde el servidor
     fetch("http://localhost:4000/api/document")
       .then((res) => res.text())
       .then((data) => {
@@ -71,8 +69,10 @@ function App() {
       })
       .catch((error) => console.error("Error fetching document:", error));
 
+    // Inicializa la conexión WebSocket
     ws.current = new WebSocket("ws://localhost:4000");
 
+    // Evento al abrir la conexión WebSocket
     ws.current.onopen = () => {
       const messageData = {
         type: "systemNotification",
@@ -83,17 +83,19 @@ function App() {
       ws.current?.send(JSON.stringify(messageData));
     };
 
+    // Manejo de mensajes recibidos a través del WebSocket
     ws.current.onmessage = (event) => {
       try {
         const messageData = JSON.parse(event.data);
         console.log("Received WebSocket message:", messageData);
 
-        const documentMessage = JSON.parse(event.data);
-        if (documentMessage.type === "edit") {
-          setDocumentContent(documentMessage.content);
-          recordSnapshot(documentMessage.author, documentMessage.content);
+        // Maneja actualizaciones del documento
+        if (messageData.type === "edit") {
+          setDocumentContent(messageData.content);
+          recordSnapshot(messageData.author, messageData.content);
         }
 
+        // Maneja mensajes de chat y otros tipos de mensajes
         if (
           messageData.type === "broadcast" &&
           messageData.author &&
@@ -122,20 +124,22 @@ function App() {
       }
     };
 
+    // Manejo de cierre y errores del WebSocket
     ws.current.onclose = () => {
       console.log("disconected");
     };
-
     ws.current.onerror = (error) => {
       console.error("WebSocket error:", error);
     };
 
+    // Limpieza al desmontar el componente
     return () => {
       ws.current?.close();
     };
   }, []);
 
-  // 3. Send edit to server
+  // **Sección: Envío de ediciones del documento**
+  // Envía el contenido actualizado del documento al servidor
   const sendEdit = (content: string) => {
     const message = {
       type: "edit",
@@ -146,7 +150,8 @@ function App() {
     ws.current?.send(JSON.stringify(message));
   };
 
-  // 4. Record a snapshot
+  // **Sección: Registro de instantáneas**
+  // Almacena una instantánea del documento con autor y timestamp
   const recordSnapshot = (author: string, content: string) => {
     setSnapshots((prev) => [
       ...prev,
@@ -158,7 +163,8 @@ function App() {
     ]);
   };
 
-  // 5. Generate .txt from history
+  // **Sección: Generación de archivo de texto para historial**
+  // Convierte el historial de instantáneas en un formato de texto
   const generateSnapshotTxt = (history: DocumentSnapshot[]): string => {
     return history
       .map((s) => {
@@ -168,7 +174,8 @@ function App() {
       .join("\n");
   };
 
-  // 6. Download .txt
+  // **Sección: Descarga del historial como archivo .txt**
+  // Descarga el historial de instantáneas como un archivo de texto
   const downloadHistoryTxt = () => {
     const historyTxt = generateSnapshotTxt(snapshots);
     const blob = new Blob([historyTxt], { type: "text/plain" });
@@ -180,13 +187,16 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
-  // Auto-scroll to bottom for chat
+  // **Sección: Auto-scroll del chat**
+  // Desplaza automáticamente el chat al último mensaje
   useEffect(() => {
     if (chatRef.current) {
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
     }
   }, [messages]);
 
+  // **Sección: Envío de mensajes de chat**
+  // Envía un mensaje de chat al servidor a través del WebSocket
   const sendMessage = () => {
     if (ws.current?.readyState === WebSocket.OPEN && inputMessage.trim()) {
       const messageData = {
@@ -195,7 +205,6 @@ function App() {
         text: inputMessage,
         timestamp: new Date().toISOString(),
       };
-
       console.log("Sending message:", messageData);
       ws.current.send(JSON.stringify(messageData));
       setInputMessage("");
@@ -204,6 +213,8 @@ function App() {
     }
   };
 
+  // **Sección: Manejo de cambios en el documento**
+  // Maneja los cambios en el textarea del documento con debounce
   const handleDocumentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
     setDocumentContent(newContent);
@@ -227,20 +238,16 @@ function App() {
     }, 500);
   };
 
-  /**
-   *
-   * @param e element
-   * On enter, calls sendMessage function due to send a message using websocket
-   */
+  // **Sección: Manejo de tecla Enter para enviar mensajes**
+  // Envía un mensaje al presionar Enter en el input del chat
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       sendMessage();
     }
   };
 
-  /**
-   * Handles the logout, removes localstorage
-   */
+  // **Sección: Cierre de sesión**
+  // Cierra la sesión, envía notificación y redirige al inicio
   const handleLogout = () => {
     const messageData = {
       type: "systemNotification",
@@ -255,6 +262,8 @@ function App() {
     navigate("/");
   };
 
+  // **Sección: Descarga del historial de chat**
+  // Descarga el historial de chat como archivo .txt
   const handleDownloadChat = () => {
     fetch("http://localhost:4000/api/chat")
       .then((res) => res.text())
@@ -270,6 +279,8 @@ function App() {
       .catch((error) => console.error("Error downloading chat:", error));
   };
 
+  // **Sección: Descarga del documento**
+  // Descarga el contenido actual del documento como archivo .txt
   const handleDownloadDocument = () => {
     fetch("http://localhost:4000/api/document")
       .then((res) => res.text())
@@ -285,24 +296,14 @@ function App() {
       .catch((error) => console.error("Error downloading document:", error));
   };
 
-  // HISTORICAL
-
-  // Function to download document history
-  // const handleDownloadDocumentHistory = () => {
-  //   const historyText = documentHistory.join("\n");
-  //   const blob = new Blob([historyText], { type: "text/plain" });
-  //   const url = URL.createObjectURL(blob);
-  //   const link = document.createElement("a");
-  //   link.href = url;
-  //   link.download = "documentHistory.txt";
-  //   link.click();
-  //   URL.revokeObjectURL(url);
-  // };
-
+  // **Sección: Interfaz de usuario**
+  // Renderiza la interfaz con el chat, el editor de documentos y los controles
   return (
     <div className="w-[100%] h-full flex">
+      {/* Barra lateral con controles */}
       <div className="w-[70px] h-[100vh] border-r-1 bg-gray-200 border-gray-300 flex flex-col items-center gap-2">
         <div className="flex flex-col justify-start mt-4">
+          {/* Avatar del usuario */}
           <div className="h-[50px] w-[50px] mb-3 rounded-full bg-gray-600 flex flex-col justify-center items-center text-center">
             <p className="font-medium">
               {localStorage.getItem("username")?.slice(0, 2).toUpperCase()}
@@ -310,7 +311,7 @@ function App() {
           </div>
         </div>
         <div className="flex flex-col justify-center items-center h-full">
-          {/* button export chat */}
+          {/* Botón para exportar chat */}
           <div
             data-tooltip-target="tooltip-chat"
             data-tooltip-placement="right"
@@ -335,7 +336,7 @@ function App() {
               <path d="M16 11h-8" />
             </svg>
           </div>
-          {/* tooltip chat */}
+          {/* Tooltip para exportar chat */}
           <div
             id="tooltip-chat"
             role="tooltip"
@@ -344,7 +345,7 @@ function App() {
             Export chat
             <div className="tooltip-arrow" data-popper-arrow></div>
           </div>
-          {/* export document */}
+          {/* Botón para exportar documento */}
           <div
             data-tooltip-target="tooltip-doc"
             data-tooltip-placement="right"
@@ -371,7 +372,7 @@ function App() {
               <path d="M12.5 15a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1 -3 0v-3a1.5 1.5 0 0 1 1.5 -1.5z" />
             </svg>
           </div>
-          {/* export document tooltip */}
+          {/* Tooltip para exportar documento */}
           <div
             id="tooltip-doc"
             role="tooltip"
@@ -380,7 +381,7 @@ function App() {
             Export document
             <div className="tooltip-arrow" data-popper-arrow></div>
           </div>
-          {/* export document history */}
+          {/* Botón para exportar historial del documento */}
           <div
             data-tooltip-target="tooltip-history"
             data-tooltip-placement="right"
@@ -402,9 +403,9 @@ function App() {
               <path stroke="none" d="M0 0h24v24H0z" fill="none" />
               <path d="M12 8l0 4l2 2" />
               <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" />
-            </svg>{" "}
+            </svg>
           </div>
-          {/* export document history tooltip */}
+          {/* Tooltip para exportar historial */}
           <div
             id="tooltip-history"
             role="tooltip"
@@ -415,6 +416,7 @@ function App() {
           </div>
         </div>
         <div className="flex flex-col justify-end mt-auto">
+          {/* Botón de cerrar sesión */}
           <div
             onClick={handleLogout}
             className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 items-center flex flex-col justify-center hover:cursor-pointer hover:bg-red-400"
@@ -437,14 +439,13 @@ function App() {
               <path d="M18 15l3 -3" />
             </svg>
           </div>
-
         </div>
-
       </div>
-      {/* Chat section*/}
+      {/* Se Schools and universitiescción: Área de chat */}
       <div className="w-[30%] h-[100vh] border-r-1 bg-gray-50 border-gray-300 grid-cols-2">
         <div className="h-[93%] flex flex-col">
           <div className="flex flex-col flex-grow w-full max-w-xl bg-white overflow-hidden">
+            {/* Contenedor de mensajes del chat */}
             <div
               id="chat"
               ref={chatRef}
@@ -462,6 +463,7 @@ function App() {
           </div>
         </div>
         <div className="border-t-1 border-gray-300 flex h-[7%] flex-col justify-center">
+          {/* Input y botón para enviar mensajes */}
           <div className="flex justify-evenly">
             <input
               id="textMessage"
@@ -494,6 +496,7 @@ function App() {
           </div>
         </div>
       </div>
+      {/* Sección: Editor de documentos */}
       <div className="w-[70%] flex flex-col justify-center items-center">
         <textarea
           className="h-[90vh] w-[60%] border-1 border-gray-100 p-5 resize-none shadow-md focus:select-none focus:outline-none"

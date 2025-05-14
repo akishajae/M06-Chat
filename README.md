@@ -1,54 +1,46 @@
-# React + TypeScript + Vite
+# Collaborative Chat and Document Editor
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Descripción del Proyecto
 
-Currently, two official plugins are available:
+Esta aplicación web, desarrollada con React y TypeScript, permite a múltiples usuarios colaborar en tiempo real en un chat y un editor de documentos. Utiliza WebSocket para sincronizar mensajes y ediciones instantáneamente. Las funcionalidades incluyen:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Chat en tiempo real con auto-scroll.
+- Editor de documentos colaborativo con actualizaciones en tiempo real.
+- Historial de ediciones del documento, descargable como .txt.
+- Descarga del historial de chat y documento actual como .txt.
+- Autenticación básica vía localStorage.
+- Interfaz con barra lateral para exportar datos y cerrar sesión.
 
-## Expanding the ESLint configuration
+El backend (no incluido) debe estar en http://localhost:4000, con endpoints /api/chat, /api/document, y WebSocket en ws://localhost:4000.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Tecnologías Utilizadas
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+- Frontend: React, TypeScript, React Router, Tailwind CSS (implícito en clases CSS).
+- Comunicación: WebSocket.
+- Almacenamiento: localStorage para autenticación y nombre de usuario.
+
+## Prerrequisitos
+
+- Node.js (v16 o superior): https://nodejs.org/
+- npm (incluido con Node.js) o yarn (opcional).
+- Servidor backend en http://localhost:4000 con endpoints /api/chat, /api/document y WebSocket ws://localhost:4000.
+## Backend server
+- Backend repo: ```https://github.com/akishajae/M06-ChatBack.git```
+
+## Instalación de Dependencias
+
+1. Clona el repositorio (o copia el código):
+
+2. Instala dependencias:
+
+``` bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Arrancar el chat
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+``` bash
+npm run dev
 ```
+
+
