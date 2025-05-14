@@ -147,33 +147,38 @@ function App() {
   };
 
   // 4. Record a snapshot
-const recordSnapshot = (author: string, content: string) => {
-  setSnapshots(prev => [...prev, {
-    timestamp: new Date().toISOString(),
-    author,
-    content
-  }]);
-};
+  const recordSnapshot = (author: string, content: string) => {
+    setSnapshots((prev) => [
+      ...prev,
+      {
+        timestamp: new Date().toISOString(),
+        author,
+        content,
+      },
+    ]);
+  };
 
-// 5. Generate .txt from history
-const generateSnapshotTxt = (history: DocumentSnapshot[]): string => {
-  return history.map(s => {
-    const date = new Date(s.timestamp).toLocaleString();
-    return `[${date} - ${s.author}]\n${s.content}\n`;
-  }).join('\n');
-};
+  // 5. Generate .txt from history
+  const generateSnapshotTxt = (history: DocumentSnapshot[]): string => {
+    return history
+      .map((s) => {
+        const date = new Date(s.timestamp).toLocaleString();
+        return `[${date} - ${s.author}]\n${s.content}\n`;
+      })
+      .join("\n");
+  };
 
-// 6. Download .txt
-const downloadHistoryTxt = () => {
-  const historyTxt = generateSnapshotTxt(snapshots);
-  const blob = new Blob([historyTxt], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'document-history.txt';
-  a.click();
-  URL.revokeObjectURL(url);
-};
+  // 6. Download .txt
+  const downloadHistoryTxt = () => {
+    const historyTxt = generateSnapshotTxt(snapshots);
+    const blob = new Blob([historyTxt], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "document-history.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Auto-scroll to bottom for chat
   useEffect(() => {
@@ -305,7 +310,10 @@ const downloadHistoryTxt = () => {
           </div>
         </div>
         <div className="flex flex-col justify-center items-center h-full">
+          {/* button export chat */}
           <div
+            data-tooltip-target="tooltip-chat"
+            data-tooltip-placement="right"
             onClick={handleDownloadChat}
             className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 flex items-center justify-center hover:cursor-pointer hover:bg-gray-400"
           >
@@ -327,7 +335,19 @@ const downloadHistoryTxt = () => {
               <path d="M16 11h-8" />
             </svg>
           </div>
+          {/* tooltip chat */}
           <div
+            id="tooltip-chat"
+            role="tooltip"
+            className="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700"
+          >
+            Export chat
+            <div className="tooltip-arrow" data-popper-arrow></div>
+          </div>
+          {/* export document */}
+          <div
+            data-tooltip-target="tooltip-doc"
+            data-tooltip-placement="right"
             onClick={handleDownloadDocument}
             className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 flex items-center justify-center hover:cursor-pointer hover:bg-blue-400"
           >
@@ -351,9 +371,22 @@ const downloadHistoryTxt = () => {
               <path d="M12.5 15a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1 -3 0v-3a1.5 1.5 0 0 1 1.5 -1.5z" />
             </svg>
           </div>
+          {/* export document tooltip */}
           <div
-          onClick={downloadHistoryTxt}
-          className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 flex items-center justify-center hover:cursor-pointer hover:bg-blue-400">
+            id="tooltip-doc"
+            role="tooltip"
+            className="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700"
+          >
+            Export document
+            <div className="tooltip-arrow" data-popper-arrow></div>
+          </div>
+          {/* export document history */}
+          <div
+            data-tooltip-target="tooltip-history"
+            data-tooltip-placement="right"
+            onClick={downloadHistoryTxt}
+            className="h-[50px] w-[50px] mb-3 rounded-full transition-colors bg-gray-300 flex items-center justify-center hover:cursor-pointer hover:bg-blue-400"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -370,6 +403,15 @@ const downloadHistoryTxt = () => {
               <path d="M12 8l0 4l2 2" />
               <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" />
             </svg>{" "}
+          </div>
+          {/* export document history tooltip */}
+          <div
+            id="tooltip-history"
+            role="tooltip"
+            className="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700"
+          >
+            Export document history
+            <div className="tooltip-arrow" data-popper-arrow></div>
           </div>
         </div>
         <div className="flex flex-col justify-end mt-auto">
@@ -395,7 +437,9 @@ const downloadHistoryTxt = () => {
               <path d="M18 15l3 -3" />
             </svg>
           </div>
+
         </div>
+
       </div>
       {/* Chat section*/}
       <div className="w-[30%] h-[100vh] border-r-1 bg-gray-50 border-gray-300 grid-cols-2">
@@ -459,98 +503,6 @@ const downloadHistoryTxt = () => {
         />
       </div>
     </div>
-    // <div className="flex h-screen w-screen">
-    //   {/* Chat Section (Untouched) */}
-    //   <div className="w-[30%] h-full bg-gray-200 flex flex-col justify-center items-center">
-    //     <div className="w-[100%] h-[100%] bg-gray-200 grid-rows-2">
-    //       <div className="h-[90%] flex flex-col">
-    //         <div className="flex flex-col flex-grow w-full max-w-xl bg-white overflow-hidden">
-    //           <div
-    //             id="chat"
-    //             ref={chatRef}
-    //             className="flex flex-col flex-grow h-0 p-4 overflow-auto"
-    //           >
-    //             {messages.map((msg, index) => (
-    //               <Message
-    //                 key={index}
-    //                 author={msg.author}
-    //                 text={msg.text}
-    //                 timestamp={msg.timestamp}
-    //               />
-    //             ))}
-    //           </div>
-    //         </div>
-    //       </div>
-    //       <div className="h-[10%] w-full border-t border-gray-400 flex items-center px-4 mr-3">
-    // <input
-    //   id="textMessage"
-    //   className="flex-grow p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-    //   type="text"
-    //   placeholder="Type your message..."
-    //   value={inputMessage}
-    //   onChange={(e) => setInputMessage(e.target.value)}
-    //   onKeyPress={handleKeyPress}
-    // />
-    //         <div className="w-[10%] rounded-full bg-blue">
-    //           <svg
-    //             onClick={sendMessage}
-    //             xmlns="http://www.w3.org/2000/svg"
-    //             width="24"
-    //             height="24"
-    //             viewBox="0 0 24 24"
-    //             fill="none"
-    //             stroke="currentColor"
-    //             strokeWidth="2"
-    //             strokeLinecap="round"
-    //             strokeLinejoin="round"
-    //             className="icon icon-tabler icons-tabler-outline icon-tabler-send-2"
-    //           >
-    //             <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-    //             <path d="M4.698 4.034l16.302 7.966l-16.302 7.966a.503 .503 0 0 1 -.546 -.124a.555 .555 0 0 1 -.12 -.568l2.468 -7.274l-2.468 -7.274a.555 .555 0 0 1 .12 -.568a.503 .503 0 0 1 .546 -.124z" />
-    //             <path d="M6.5 12h14.5" />
-    //           </svg>
-    //         </div>
-    //       </div>
-    //     </div>
-    //   </div>
-
-    //   {/* Collaborative Document Section with Sidebar */}
-    //   <div className="w-[70%] h-full bg-gray-50 flex">
-    //     {/* Sidebar */}
-    //     <div className="w-64 bg-white shadow-md flex flex-col items-center py-6">
-    //       <h2 className="text-lg font-semibold text-gray-800 mb-6">Opciones</h2>
-    //       <button
-    //         className="w-48 mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-    //         onClick={handleDownloadDocument}
-    //       >
-    //         Descargar Documento
-    //       </button>
-    //       <button
-    //         className="w-48 mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-    //         onClick={handleDownloadChat}
-    //       >
-    //         Descargar Chat
-    //       </button>
-    //       <button
-    //         className="w-48 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-    //         onClick={handleLogout}
-    //       >
-    //         Logout
-    //       </button>
-    //     </div>
-
-    //     {/* Document Area */}
-    //     <div className="flex-1 p-6">
-    //       <h2 className="text-xl font-semibold text-gray-800 mb-4">Collaborative Document</h2>
-    //       <textarea
-    //         className="w-full h-[80vh] p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-    //         value={documentContent}
-    //         onChange={handleDocumentChange}
-    //         placeholder="Start collaborating here..."
-    //       />
-    //     </div>
-    //   </div>
-    // </div>
   );
 }
 
